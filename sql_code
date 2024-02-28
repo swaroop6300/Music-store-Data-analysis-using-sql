@@ -1,0 +1,204 @@
+use music_database
+show tables
+select * from album2
+select * from employee
+Q-1)  WHO IS THE SENIOR MOST EMPLOYEE ACCORDING TO JOB 	TITLE?
+
+select * from employee
+order by levels desc
+limit 1
+
+Q-2) WHICH COUNTRY HAS MOST INVOICE?
+
+SHOW TABLES
+SELECT * FROM INVOICE
+SELECT * FROM ALBUM2
+SELECT * FROM CUSTOMER
+SELECT C.country,count(i.invoice_id) as invoice from customer c
+join invoice i on i.customer_id=c.customer_id
+group by c.country
+order by invoice desc
+
+
+Q-3 What are the top 3 values of total invoice?
+select * from invoice
+select total from invoice
+order by total desc
+limit 3
+
+
+Q-4 ) Which city has the best customers? We would like to throw a promotional Music
+Festival in the city we made the most money. Write a query that returns one city that
+has the highest sum of invoice totals. Return both the city name & sum of all invoice
+total
+
+SHOW TABLES
+SELECT * FROM INVOICE
+
+SELECT billing_city,sum(total)as whole from invoice
+group by billing_city
+order by whole desc
+limit 3
+
+Q-5) Who is the best customer? The customer who has spent the most money will be
+declared the best customer. Write a query that returns the person who has spent the
+most money ?
+
+
+select c.customer_id ,c.first_name,c.last_name,sum(inv.total)as total 
+from invoice inv join customer c on inv.customer_id=c.customer_id
+group by c.customer_id,c.first_name,c.last_name
+order by total desc
+
+
+Q-6) Write query to return the email, first name, last name, & Genre of all Rock Music
+listeners. Return your list ordered alphabetically by email starting with  A
+SELECT * FROM CUSTOMER
+SELECT * FROM GENRE     select * from album2  select * from media_type
+show tables
+SELECT  distinct C.FIRST_NAME,C.LAST_NAME,C.EMAIL,G.GENRE_ID 
+from customer  c  
+join invoice inv on inv.customer_id=c.customer_id
+join invoice_line invl on inv.invoice_id=invl.invoice_id
+join track t on invl.track_id=t.track_id
+join genre g on g.genre_id=t.genre_id
+where g.name='Rock'
+order by c.email
+
+
+Q7) Lets invite the artists who have written the most rock music in our dataset. Write a
+query that returns the Artist name and total track count of the top 10 rock bands
+
+SHOW TABLES
+SELECT * FROM ARTIST
+SELECT * FROM TRACK
+select * from album2
+select * from genre
+
+SELECT a.artist_id,a.name,count(a.artist_id) as songs from artist a
+join album2 ab  on a.artist_id=ab.artist_id
+join track t on t.album_id=ab.album_id
+join genre g on t.genre_id=g.genre_id
+where g.name like 'Rock'
+group by 1,2
+order by songs desc
+
+
+Q-8)  Return all the track names that have a song length longer than the average song length.
+Return the Name and Milliseconds for each track. Order by the song length with the
+longest songs listed first.
+
+
+select name,milliseconds as song_length from track
+where milliseconds> ( select avg(milliseconds) from track)
+order by milliseconds desc
+
+Q-9) Find how much amount spent by each customer on artists? Write a query to return
+customer name, artist name and total spent
+show tables
+SELECT * FROM CUSTOMER
+SELECT * FROM ARTIST
+SELECT * FROM invoice_line
+
+select c.customer_id,c.first_name,ats.name,sum(invl.unit_price*invl.quantity)as total  from customer c
+join invoice inv on c.customer_id=inv.customer_id
+join invoice_line invl on inv.invoice_id=invl.invoice_id
+join track t on invl .track_id=t.track_id
+join album2 a on t.album_id=a.album_id
+join artist ats on a.artist_id=ats.artist_id
+group by c.customer_id,c.first_name,ats.name
+order by total desc
+  
+           or     
+    
+    WITH rohit AS (
+    SELECT 
+        artist.artist_id AS artist_id,
+        artist.name AS artist_name,
+        SUM(invoice_line.unit_price * invoice_line.quantity) AS total_sales
+    FROM 
+        invoice_line
+    JOIN 
+        track ON track.track_id = invoice_line.track_id
+    JOIN 
+        album2 ON album2.album_id = track.album_id
+    JOIN 
+        artist ON artist.artist_id = album2.artist_id
+    GROUP BY 
+        artist.artist_id,
+        artist.name
+    ORDER BY 
+        total_sales DESC
+)
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    rohit.artist_name,
+    SUM(il2.unit_price * il2.quantity) AS total_spent -- Corrected alias for invoice_line
+FROM 
+    invoice il
+JOIN 
+    customer c ON c.customer_id = il.customer_id
+JOIN 
+    invoice_line il2 ON il2.invoice_id = il.invoice_id
+JOIN 
+    track t ON t.track_id = il2.track_id
+JOIN 
+    album2 alb ON alb.album_id = t.album_id
+JOIN 
+    rohit ON rohit.artist_id = alb.artist_id
+GROUP BY 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    rohit.artist_name
+ORDER BY 
+    total_spent DESC;
+
+
+Q-10) We want to find out the most popular music Genre for each country. We determine the
+most popular genre as the genre with the highest amount of purchases. Write a query
+that returns each country along with the top Genre. For countries where the maximum
+number of purchases is shared return all Genres?
+
+with rohit as(
+select count(invl.quantity)as purchases,c.country,g.name,g.genre_id,
+row_number()over(partition by c.country order by count(invl.quantity)desc) as rowno
+from invoice_line invl
+join invoice inv on inv.invoice_id=invl.invoice_id
+join customer c on c.customer_id=inv.customer_id
+join track t on t.track_id=invl.track_id
+join genre g on g.genre_id=t.genre_id
+group by 2,3,4
+order by 2 asc ,1 desc
+)
+select * from rohit where rowno<=1
+order by purchases desc
+
+
+Q-11)   Write a query that determines the customer that has spent the most on music for each
+        country. Write a query that returns the country along with the top customer and how
+	    much they spent. For countries where the top amount spent is shared, provide all
+		customers who spent this amount ?
+with rohit as(
+select c.customer_id,c.country,sum(invl.quantity*invl.unit_price) as total from customer c
+join invoice inv on inv.customer_id=c.customer_id
+join invoice_line invl on invl.invoice_id=inv.invoice_id
+group by 1,2)
+select country ,max(total)as maximum from rohit
+group by country
+order by maximum desc
+
+or  
+
+with rohit as(
+select c.customer_id,c.country,sum(invl.quantity*invl.unit_price)as total,
+row_number()over(partition by c.country order by  sum(invl.quantity*invl.unit_price)desc)as rowno
+from customer c
+join invoice inv on inv.customer_id=c.customer_id
+join invoice_line invl on invl.invoice_id=inv.invoice_id
+group by 1,2)
+select customer_id,country , total from rohit
+where rowno=1
+order by total desc
